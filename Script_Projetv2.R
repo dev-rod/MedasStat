@@ -3,10 +3,8 @@ if("lubridate" %in% rownames(installed.packages()) == FALSE) {install.packages("
 if("FactoMineR" %in% rownames(installed.packages()) == FALSE) {install.packages("FactoMineR")};library(FactoMineR)
 if("factoextra" %in% rownames(installed.packages()) == FALSE) {install.packages("factoextra")};library(factoextra)
 if("corrplot" %in% rownames(installed.packages()) == FALSE) {install.packages("corrplot")};library(corrplot)
-if("stringr" %in% rownames(installed.packages()) == FALSE) {install.packages("stringr")};library(stringr)
 if("rgl" %in% rownames(installed.packages()) == FALSE) {install.packages("rgl")};library(rgl)
 
-if("dplyr" %in% rownames(installed.packages()) == FALSE) {install.packages("dplyr")};library(dplyr)
 if("gsubfn" %in% rownames(installed.packages()) == FALSE) {install.packages("gsubfn")};library(gsubfn)
 if("proto" %in% rownames(installed.packages()) == FALSE) {install.packages("proto")};library(proto)
 if("RSQLite" %in% rownames(installed.packages()) == FALSE) {install.packages("RSQLite")};library(RSQLite)
@@ -14,7 +12,6 @@ if("readxl" %in% rownames(installed.packages()) == FALSE) {install.packages("rea
 if("data.table" %in% rownames(installed.packages()) == FALSE) {install.packages("data.table")};library(data.table)
 if("sqldf" %in% rownames(installed.packages()) == FALSE) {install.packages("sqldf")};library(sqldf)
 if("readxl" %in% rownames(installed.packages()) == FALSE) {install.packages("readxl")};library(readxl)
-if("questionr" %in% rownames(installed.packages()) == FALSE) {install.packages("questionr")};library(questionr)
 
 # Import des fichiers
 setwd("C:/Transway/rodrigue/MEDAS/stat_josse/Projet/data_asso")
@@ -28,50 +25,59 @@ baseinternet<-read.csv2("234400034_001-002_deploiement-de-la-fibre-optique-ftth-
 basegare<-read.csv2("referentiel-gares-voyageurs.csv",sep=";",dec='.', encoding='UTF-8')
 
 # Renommage variable Code_Postal
+if("questionr" %in% rownames(installed.packages()) == FALSE) {install.packages("questionr")};library(questionr)
 basesirene <- rename.variable(basesirene, "Code.commune.de.l.établissement", "codeInsee")
+basesirene <- rename.variable(basesirene, "Commune.de.l.établissement", "commune")
 baserestaurant <- rename.variable(baserestaurant, "Code.Insee.de.la.Commune", "codeInsee")
 basefetes <- rename.variable(basefetes, "Code.Insee.de.la.Commune", "codeInsee")
 basepopulation <- rename.variable(basepopulation, "Commune.active..code.", "codeInsee")
 baseinternet <- rename.variable(baseinternet, "Code.INSEE", "codeInsee")
-basegare <- rename.variable(basegare, "Code.postal", "codeInsee")
+basegare <- subset(basegare, is.na(Code.département) == FALSE)
 
-# Création code insee par rapport au code departement et code commune (padding de 0)
+# basegare : Création code insee par rapport au code departement et code commune (padding de 0)
+if("stringr" %in% rownames(installed.packages()) == FALSE) {install.packages("stringr")};library(stringr)
+basegare$Code.département<-str_pad(basegare$Code.département,2,side = c("left"),pad = "0" )
 basegare$Code.commune2<-str_pad(basegare$Code.commune,3,side = c("left"),pad = "0" )
 basegare$codeInsee<-paste(basegare$Code.département,basegare$Code.commune2, sep = "")
 
-###### Modification des bases
-baseassociation<-subset(basesirene, Nature.juridique.de.l.unité.légale == "Association déclarée"& Etat.administratif.de.l.établissement== "Actif")
+# Initialisation des bases complémentaires depuis la base sirene
+baseassociation<-subset(basesirene, Nature.juridique.de.l.unité.légale == "Association déclarée" & Etat.administratif.de.l.établissement== "Actif")
 basegareLoire <- subset(basegare, Code.département  %in% c(44,49,72,53,85))
 baseentreprise50salariesetplus <- subset(basesirene, Etat.administratif.de.l.établissement== "Actif" & Nature.juridique.de.l.unité.légale != "Association déclarée" &  Tranche.de.l.effectif.de.l.établissement %in% c("50 à 99 salariés","5000 à 9999 salariés","10000 salariés et plus"))
 basebar <- subset(basesirene, Activité.principale.de.l.établissement == "56.30Z" & Etat.administratif.de.l.établissement== "Actif")
+
 # Population par Année
-population_2015<-basepopulation[which(basepopulation==2015),]
-population_2014<-basepopulation[which(basepopulation==2014),]
-population_2013<-basepopulation[which(basepopulation==2013),]
-population_2012<-basepopulation[which(basepopulation==2012),]
 population_2011<-basepopulation[which(basepopulation==2011),]
+population_2012<-basepopulation[which(basepopulation==2012),]
+population_2013<-basepopulation[which(basepopulation==2013),]
+population_2014<-basepopulation[which(basepopulation==2014),]
+population_2015<-basepopulation[which(basepopulation==2015),]
 
-# Base CP distinct
-base_CP <- distinct(basesirene, codeInsee, Commune.de.l.établissement)
+# Base des codes communes uniques
+if("dplyr" %in% rownames(installed.packages()) == FALSE) {install.packages("dplyr")};library(dplyr)
+basesirene$commune <- str_replace_all(basesirene$commune, "-", " ")
+basesirene$commune <- str_replace_all(basesirene$commune, 'È', 'E')
+base_CP <- distinct(basesirene, codeInsee, commune)
 
-###### Création des indicateurs ######
+# Création des indicateurs
+
+# Variables qualitatives
 baseinternet$Locaux.raccordables.2eme.trimestre.2019[baseinternet$Locaux.raccordables.2eme.trimestre.2019 ==0] <- 0
 baseinternet$Locaux.raccordables.2eme.trimestre.2019[baseinternet$Locaux.raccordables.2eme.trimestre.2019 !=0] <- 1
 Fibreoupas <- aggregate(baseinternet$Locaux.raccordables.2eme.trimestre.2019,by=list(baseinternet$codeInsee),FUN=sum)
 names(Fibreoupas) <- c("codeInsee","fibreoupas")
-Fibreoupas$fibreoupas[Fibreoupas$fibreoupas ==0] <- "pasfibre"
-Fibreoupas$fibreoupas[Fibreoupas$fibreoupas !=0] <- "fibre"
+Fibreoupas$fibreoupas[Fibreoupas$fibreoupas ==0] <- FALSE
+Fibreoupas$fibreoupas[Fibreoupas$fibreoupas !=0] <- TRUE
 
-Nb_assos<-aggregate(baseassociation$SIREN,by=list(baseassociation$codeInsee),FUN=length)
+# Variables quantitatives
 Nb_fetes<-aggregate(basefetes$Nom.de.la.fête.ou.manifestation,by=list(basefetes$codeInsee),FUN=length)
+Nb_assos<-aggregate(baseassociation$SIREN,by=list(baseassociation$codeInsee),FUN=length)
 Nb_gare <- aggregate(basegareLoire$Code.plate.forme,by=list(basegareLoire$codeInsee),FUN=length)
 Nb_resto <- aggregate(baserestaurant$Nom.de.l.offre.touristique,by=list(baserestaurant$codeInsee),FUN=length)
 Nb_entrepriseplusde50s <- aggregate(baseentreprise50salariesetplus$SIREN,by=list(baseentreprise50salariesetplus$codeInsee),FUN=length)
 Nb_bar <- aggregate(basebar$SIREN,by=list(basebar$codeInsee),FUN=length)
 
-
-
-# Différence de ligne entre 2 bdd
+# Nettoyage des population_2015 de ligne entre 2 bdd
 xx <- merge(population_2011, population_2015, by="codeInsee",all.x= T , all.y=T)
 donnees_manquante<-xx[which(is.na(xx$Année.x)),]
 population_2015 <- subset(population_2015, ! codeInsee %in% c(44000,49000,72000,85000,53000,49382,NA))
@@ -94,26 +100,50 @@ mean(EvolPop[EvolPop$Nb_population2015!=0,"EvolutionPop20112015plus15ansetemploi
 
 EvolPop <- subset(EvolPop, select=c("codeInsee","EvolutionPop20112015","EvolutionPop20112015plus15ansetemploi"))
 
+
 names(Nb_assos) <- c("codeInsee","nbasso")
 names(Nb_fetes) <- c("codeInsee","nbfetes")
-names(Nb_gare) <- c("codeInsee","nbgare")
 names(Nb_resto) <- c("codeInsee","nbresto")
 names(Nb_entrepriseplusde50s) <- c("codeInsee","nbentrepriseplusde50s")
 names(Fibreoupas) <- c("codeInsee","fibre")
 names(Nb_bar) <- c("codeInsee","nbbar")
+names(Nb_gare) <- c("codeInsee","nbgare")
 
 base1 <- merge(base_CP, Nb_assos, by="codeInsee",all.x= T , all.y=T)
-base2 <- merge(base1,Nb_fetes, by="codeInsee",all.x= T , all.y=T)
-base3 <- merge(base2, Nb_gare, by="codeInsee",all.x= T , all.y=T)
-base4 <- merge(base3, Nb_resto, by="codeInsee",all.x= T , all.y=T)
-base5 <- merge(base4, EvolPop, by="codeInsee",all.x= T , all.y=T)
-base6 <- merge(base5, Nb_entrepriseplusde50s, by="codeInsee",all.x= T , all.y=T)
-base7 <- merge(base6, Nb_bar, by="codeInsee",all.x= T , all.y=T)
+base1$nbasso[is.na(base1$nbasso) == T] <- median(base1$nbasso, na.rm=T)
+write.csv(base1,"dbCodePostalAsso.csv", quote=F, row.names = F)
 
-base8 <- merge(base7, Fibreoupas, by="codeInsee",all.x= T , all.y=T)
+base2 <- merge(base1, Nb_fetes, by="codeInsee", all.x= T, all.y=T)
+base2 <- subset(base2, is.na(commune) == F)
+base2$nbfetes[is.na(base2$nbfetes) == T] <- 0
+write.csv(base2,"dbCodePostalFete.csv", quote=F, row.names = F)
+
+base3 <- merge(base2, Nb_gare, by="codeInsee", all.x= T, all.y=T)
+base3$nbgare[is.na(base3$nbgare) == T] <- 0
+write.csv(base3,"dbCodePostalGare.csv", quote=F, row.names = F)
+
+base4 <- merge(base3, Nb_resto, by="codeInsee", all.x= T, all.y=T)
+base4$nbresto[is.na(base4$nbresto) == T] <- 0
+write.csv(base4,"dbCodePostalRestau.csv", quote=F, row.names = F)
+
+base5 <- merge(base4, EvolPop, by="codeInsee", all.x= T, all.y=T)
+base5 <- subset(base5, is.na(commune) == F)
+write.csv(base5,"dbCodePostalEvolPop.csv", quote=F, row.names = F)
+
+base6 <- merge(base5, Nb_entrepriseplusde50s, by="codeInsee", all.x= T, all.y=T)
+base6$nbentrepriseplusde50s[is.na(base6$nbentrepriseplusde50s) == T] <- 0
+write.csv(base6,"dbCodePostalEntreprise.csv", quote=F, row.names = F)
+
+base7 <- merge(base6, Nb_bar, by="codeInsee", all.x= T , all.y=T)
+base7$nbbar[is.na(base7$nbbar) == T] <- 0
+write.csv(base7,"dbCodePostalBar.csv", quote=F, row.names = F)
+
+base8 <- merge(base7, Fibreoupas, by="codeInsee", all.x= T, all.y=T)
+base8$fibreoupas[is.na(base8$fibreoupas) == T] <- 0
+write.csv(base8,"dbCodePostalFibre.csv", quote=F, row.names = F)
 
 
-base7 <- subset(base7, ! codeInsee %in% c(0,2498,4007,21711,25056,35236,37170,37213,37231))
+base7 <- subset(base7, x = Nb_gare! codeInsee %in% c(0,2498,4007,21711,25056,35236,37170,37213,37231))
 base7[which(is.na(base7$nbfetes) == TRUE)] <- 0
 base7[is.na(base7[,"nbasso"]),"nbasso"]<-0
 base7[is.na(base7[,"nbfetes"]),"nbfetes"]<-0
@@ -125,22 +155,23 @@ base7[is.na(base7[,"EvolutionPop20112015plus15ansetemploi"]),"EvolutionPop201120
 base7[is.na(base7[,"nbbar"]),"nbbar"]<-0
 
 
-base7<-base7[,c("nbasso","nbfetes","nbgare","nbresto","nbentrepriseplusde50s","EvolutionPop20112015","EvolutionPop20112015plus15ansetemploi","nbbar")]
-
+base8<-base8[,c("nbasso","nbfetes","nbgare","nbresto","nbentrepriseplusde50s","EvolutionPop20112015","EvolutionPop20112015plus15ansetemploi","nbbar")]
+# base7<-base7[,c("nbasso","nbfetes","nbgare","nbresto","nbentrepriseplusde50s","EvolutionPop20112015","EvolutionPop20112015plus15ansetemploi","nbbar")]
+# View(base7)
 res.pca<-PCA(base7, scale.unit = TRUE, ncp = 5)
 
+# View(base7)
+# res.pca<-PCA(base7, scale.unit = TRUE, ncp = 5)
 
-summary(base7)
-
-res.pca$var$coord
-res.pca$var$contrib
+# res.pca$var$coord
+# res.pca$var$contrib
 
 #Mise en classe
-hist(jeux_acm$height,breaks = unique(jeux_acm$height))
-jeux_acm$height_classe<-cut(jeux_acm$height,breaks = c(0,180,200,215,300))
+hist(base8$nbasso,breaks = unique(base8$nbasso))
+base8$nbasso_classe<-cut(base8$height,breaks = c(0,180,200,215,300))
 
-hist(jeux_acm$weight,breaks = unique(jeux_acm$weight))
-jeux_acm$weight_classe<-cut(jeux_acm$weight,breaks = c(0,80,100,120,200))
+hist(base8$nbbar,breaks = unique(base8$nbbar))
+base8$nbbar_classe<-cut(base8$nbbar,breaks = c(0,80,100,120,200))
 
 
 #Calcul de l'age à la fin de carrière
