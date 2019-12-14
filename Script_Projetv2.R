@@ -76,6 +76,7 @@ Nb_gare <- aggregate(basegareLoire$Code.plate.forme,by=list(basegareLoire$codeIn
 Nb_resto <- aggregate(baserestaurant$Nom.de.l.offre.touristique,by=list(baserestaurant$codeInsee),FUN=length)
 Nb_entrepriseplusde50s <- aggregate(baseentreprise50salariesetplus$SIREN,by=list(baseentreprise50salariesetplus$codeInsee),FUN=length)
 Nb_bar <- aggregate(basebar$SIREN,by=list(basebar$codeInsee),FUN=length)
+Nb_population<-aggregate(population_2015$Nombre.de.personnes,by=list(population_2015$codeInsee),FUN=sum)
 
 # Nettoyage des population_2015 de ligne entre 2 bdd
 xx <- merge(population_2011, population_2015, by="codeInsee",all.x= T , all.y=T)
@@ -108,145 +109,147 @@ names(Nb_entrepriseplusde50s) <- c("codeInsee","nbentrepriseplusde50s")
 names(Fibreoupas) <- c("codeInsee","fibre")
 names(Nb_bar) <- c("codeInsee","nbbar")
 names(Nb_gare) <- c("codeInsee","nbgare")
+names(Nb_population) <- c("codeInsee","nbpopulation")
 
 base1 <- merge(base_CP, Nb_assos, by="codeInsee",all.x= T , all.y=T)
 base1$nbasso[is.na(base1$nbasso) == T] <- median(base1$nbasso, na.rm=T)
-write.csv(base1,"dbCodePostalAsso.csv", quote=F, row.names = F)
 
 base2 <- merge(base1, Nb_fetes, by="codeInsee", all.x= T, all.y=T)
 base2 <- subset(base2, is.na(commune) == F)
 base2$nbfetes[is.na(base2$nbfetes) == T] <- 0
-write.csv(base2,"dbCodePostalFete.csv", quote=F, row.names = F)
 
 base3 <- merge(base2, Nb_gare, by="codeInsee", all.x= T, all.y=T)
 base3$nbgare[is.na(base3$nbgare) == T] <- 0
-write.csv(base3,"dbCodePostalGare.csv", quote=F, row.names = F)
 
 base4 <- merge(base3, Nb_resto, by="codeInsee", all.x= T, all.y=T)
 base4$nbresto[is.na(base4$nbresto) == T] <- 0
-write.csv(base4,"dbCodePostalRestau.csv", quote=F, row.names = F)
 
-base5 <- merge(base4, EvolPop, by="codeInsee", all.x= T, all.y=T)
+base5 <- merge(base4, Nb_entrepriseplusde50s, by="codeInsee", all.x= T, all.y=T)
 base5 <- subset(base5, is.na(commune) == F)
-write.csv(base5,"dbCodePostalEvolPop.csv", quote=F, row.names = F)
 
-base6 <- merge(base5, Nb_entrepriseplusde50s, by="codeInsee", all.x= T, all.y=T)
-base6$nbentrepriseplusde50s[is.na(base6$nbentrepriseplusde50s) == T] <- 0
-write.csv(base6,"dbCodePostalEntreprise.csv", quote=F, row.names = F)
+base6 <- merge(base5, Nb_bar, by="codeInsee", all.x= T, all.y=T)
 
-base7 <- merge(base6, Nb_bar, by="codeInsee", all.x= T , all.y=T)
-base7$nbbar[is.na(base7$nbbar) == T] <- 0
-write.csv(base7,"dbCodePostalBar.csv", quote=F, row.names = F)
+# base61 <- merge(base6, EvolPop, by="codeInsee", all.x= T, all.y=T)
+# base61 <- subset(base61, is.na(commune) == F)
 
-base8 <- merge(base7, Fibreoupas, by="codeInsee", all.x= T, all.y=T)
-base8$fibreoupas[is.na(base8$fibreoupas) == T] <- 0
-write.csv(base8,"dbCodePostalFibre.csv", quote=F, row.names = F)
+base7 <- merge(base6, Nb_population, by="codeInsee", all.x= T, all.y=T)
+base7$nbentrepriseplusde50s[is.na(base7$nbentrepriseplusde50s) == T] <- 0
 
 
-base7 <- subset(base7, x = Nb_gare! codeInsee %in% c(0,2498,4007,21711,25056,35236,37170,37213,37231))
-base7[which(is.na(base7$nbfetes) == TRUE)] <- 0
 base7[is.na(base7[,"nbasso"]),"nbasso"]<-0
 base7[is.na(base7[,"nbfetes"]),"nbfetes"]<-0
 base7[is.na(base7[,"nbgare"]),"nbgare"]<-0
 base7[is.na(base7[,"nbresto"]),"nbresto"]<-0
 base7[is.na(base7[,"nbentrepriseplusde50s"]),"nbentrepriseplusde50s"]<-0
-base7[is.na(base7[,"EvolutionPop20112015"]),"EvolutionPop20112015"]<-0
-base7[is.na(base7[,"EvolutionPop20112015plus15ansetemploi"]),"EvolutionPop20112015plus15ansetemploi"]<-0
 base7[is.na(base7[,"nbbar"]),"nbbar"]<-0
+base7 <- subset(base7,! codeInsee %in% c(0,2498,4007,21711,25056,35236,37170,37213,37231))
+
+basepetitecommune <- subset(base7,nbpopulation <=10000 )
+basemoyennecommune <- subset(base7,nbpopulation >=10000 & nbpopulation <=50000)
+basegrossecommune <- subset(base7,nbpopulation >=50000)
+View(basepetitecommune)
+
+write.csv(basepetitecommune,"basepetitecommune.csv", quote=F, row.names = F)
+write.csv(basemoyennecommune,"basemoyennecommune.csv", quote=F, row.names = F)
+write.csv(basegrossecommune,"basegrossecommune.csv", quote=F, row.names = F)
 
 
-base8<-base8[,c("nbasso","nbfetes","nbgare","nbresto","nbentrepriseplusde50s","EvolutionPop20112015","EvolutionPop20112015plus15ansetemploi","nbbar")]
-# base7<-base7[,c("nbasso","nbfetes","nbgare","nbresto","nbentrepriseplusde50s","EvolutionPop20112015","EvolutionPop20112015plus15ansetemploi","nbbar")]
-# View(base7)
+basepetitecommune<-basepetitecommune[,c("nbasso","nbfetes","nbgare","nbresto","nbentrepriseplusde50s","nbbar")]
+basemoyennecommune<-basemoyennecommune[,c("nbasso","nbfetes","nbgare","nbresto","nbentrepriseplusde50s","nbbar")]
+basegrossecommune<-basegrossecommune[,c("nbasso","nbfetes","nbgare","nbresto","nbentrepriseplusde50s","nbbar")]
+
+
+res.pca<-PCA(basepetitecommune, scale.unit = TRUE, ncp = 5)
+res.pca<-PCA(basemoyennecommune, scale.unit = TRUE, ncp = 5)
+res.pca<-PCA(basegrossecommune, scale.unit = TRUE, ncp = 5)
+
+
+basepetiteetmoyennecommune <- subset(base7,nbpopulation <=50000)
+basepetiteetmoyennecommune<-basepetiteetmoyennecommune[,c("nbasso","nbfetes","nbgare","nbresto","nbentrepriseplusde50s","nbbar")]
+
+
+
+
+
+##### -> à modifier base selon l'acp
+res.pca<-PCA(basepetiteetmoyennecommune, scale.unit = TRUE, ncp = 5)
+#Analyse contribution par axe
+corrplot(var$contrib, is.corr=FALSE)    
+
+
+#Cercle des corrélations 
+fviz_pca_var(res.pca, col.var = "contrib",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE # Évite le chevauchement de texte
+)
+
+#Analyse des individus
+fviz_pca_ind (res.pca, col.ind = "cos2",
+              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07")
+              # repel = TRUE # Évite le chevauchement de texte
+)
+
+plot(res.pca$eig[,2])
+
+res.pca$var$coord
+
+res.pca$var$contrib
+
+plot(res.pca$ind$coord[,1:2])
+
+
+
+#Réaliser une classification grâce à la méthode Kmeans à partir de l'ACM réalisé précédemment
+coord_individu<-res.pca$ind$coord
+#Calcul d'une segmentation à 5 classes
+res_kmeans<-kmeans(coord_individu,center=5,iter.max=100,nstart=50)
+
+#Centre 
+res_kmeans$centers
+
+str(individu_clust)
+
+individu_clust<-data.frame(coord_individu,as.factor(res_kmeans$cluster))
+colnames(individu_clust)<-c("dim1","dim2","dim3","dim4","dim5","cluster")
+table(individu_clust$cluster)
+
+#Variance totale
+res_kmeans$totss
+#Variance intra
+res_kmeans$tot.withinss
+#Variance intra par groupe
+res_kmeans$withinss
+#Variance inter
+res_kmeans$betweenss
+
+# Visualisation sur les 2 premiers axes
+ggplot(individu_clust, aes(dim1, dim2, col = factor(cluster))) + 
+  geom_point(size = 2, alpha = 0.8, position = "jitter")
+# Visualisation sur l'axe 1 et 3 
+ggplot(individu_clust, aes(dim1, dim3, col = factor(cluster))) + 
+  geom_point(size = 2, alpha = 0.8, position = "jitter")
+# Visualisation sur les 3 premiers axes
+with(individu_clust, plot3d(dim1,dim2,dim3, col = cluster,size=4))
+legend3d("topright", legend = levels(individu_clust$cluster), col = levels(individu_clust$cluster), pch=19)
+
+
+#Calcul du nombre optimal de groupe
+res<-matrix(nrow=14,ncol=2)
+for(i in 2:15){
+  
+  res_kmeans<-kmeans(coord_individu,center=i,iter.max=100,nstart=50)
+  res[i-1,2]<-res_kmeans$tot.withinss/res_kmeans$totss
+  res[i-1,1]<-i
+}
+plot(res)
+
+
 res.pca<-PCA(base7, scale.unit = TRUE, ncp = 5)
 
-# View(base7)
-# res.pca<-PCA(base7, scale.unit = TRUE, ncp = 5)
+plot(res.pca$eig[,2])
 
-# res.pca$var$coord
-# res.pca$var$contrib
+res.pca$var$coord
 
-#Mise en classe
-hist(base8$nbasso,breaks = unique(base8$nbasso))
-base8$nbasso_classe<-cut(base8$height,breaks = c(0,180,200,215,300))
+res.pca$var$contrib
 
-hist(base8$nbbar,breaks = unique(base8$nbbar))
-base8$nbbar_classe<-cut(base8$nbbar,breaks = c(0,80,100,120,200))
-
-
-#Calcul de l'age à la fin de carrière
-jeux_acm$annee<-as.integer(substr(jeux_acm$birth_date,nchar(jeux_acm$birth_date)-4,nchar(jeux_acm$birth_date)))
-jeux_acm$age_fin<-jeux_acm$year_end-jeux_acm$annee
-hist(jeux_acm$age_fin)
-jeux_acm$age_fin_classe<-cut(jeux_acm$age_fin,breaks = c(0,22,28,31,35,50))
-
-jeux_acm2<-jeux_acm[,c("age_fin_classe","weight_classe","height_classe","position")]
-
-
-
-res.acm<-MCA(jeux_acm2, ncp = 5, ind.sup = NULL, quanti.sup = NULL, 
-             quali.sup = NULL, excl=NULL, graph = TRUE, 
-             level.ventil = 0, axes = c(1,2), row.w = NULL, 
-             method="Indicator", na.method="NA", tab.disj=NULL)
-#Nombre d'axe
-fviz_screeplot (res.acm, addlabels = TRUE, ylim = c (0, 45))
-
-#Analyse variable
-var <- get_mca_var(res.acm)
-
-res.acm$var$coord
-res.acm$var$contrib
-res.acm$var$cos2
-
-#Graphique variable
-fviz_mca_var (res.acm, choice = "mca.cor",
-              repel = TRUE, 
-              ggtheme = theme_minimal ())
-
-#Graphique modalité
-fviz_mca_var (res.acm,
-              repel = TRUE, 
-              ggtheme = theme_minimal ())
-
-#Graphique individu
-fviz_mca_ind(res.acm, col.ind = "cos2", 
-             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-             #repel = TRUE, 
-             ggtheme = theme_minimal())
-
-
-
-
-
-
-
-##BROUILLON
-
-names(Indicateurs) <- c("Metier","camoyen","resmoyen", "txresmoyen", "caec","resec","txresec", "caq10", "caq90", "txresq10", "txresq90","txresq025","txresq975","NbparMetier","txvaq10", "txvaq90", "txebeq10", "txebeq90",  "txvamoyen", "txebemoyen", "txvaec", "txebeec")
-
-xx <- merge(baseassociation, basesirene, by="Code_Postal")
-
-baseinternet$generation3[baseinternet$generation =="2G"] <- 2
-baseinternet$generation3[baseinternet$generation =="3G"] <- 3
-baseinternet$generation3[baseinternet$generation =="4G"] <- 4
-
-tapply(baseinternet,baseinternet$generation3,max)
-
-baseinternet$generation2[baseinternet$generation =="2G"] <- "basDébit"
-baseinternet$generation2[baseinternet$generation =="3G"] <- "hautDébit"
-baseinternet$generation2[baseinternet$generation =="4G"] <- "hautDébit"
-
-baseinternetbasdébit <- subset(baseinternet, generation2 = "basDébit")
-baseinternethautdébit <- subset(baseinternet, generation2 = "hautDébit")
-
-
-
-str(baseinternet)
-baseinternet$Date.de.mise.en.service<-as.Date(baseinternet$Date.de.mise.en.service)
-baseinternet$generation3
-generation_max<-aggregate(generation3 ~ codeInsee, data = baseinternet, max)
-test<-data.frame(table(baseinternet$codeInsee,baseinternet$generation, baseinternet$Operateur))
-install.packages("reshape")
-library(reshape)
-colnames(test)
-subjmeans <- cast(test, Var1~Var2, mean)
+plot(res.pca$ind$coord[,1:2])
